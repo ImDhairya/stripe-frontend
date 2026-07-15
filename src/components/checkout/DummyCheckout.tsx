@@ -4,7 +4,6 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useToast } from '../../hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { paymentsApi } from '../../api/payments';
 
 interface DummyCheckoutProps {
   paymentId: string;
@@ -39,9 +38,9 @@ export function DummyCheckout({ paymentId }: DummyCheckoutProps) {
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>Card Number</Label>
-          <Input 
-            value={cardNumber} 
-            onChange={(e) => setCardNumber(e.target.value)} 
+          <Input
+            value={cardNumber}
+            onChange={(e) => setCardNumber(e.target.value)}
             className="font-mono"
           />
         </div>
@@ -57,9 +56,9 @@ export function DummyCheckout({ paymentId }: DummyCheckoutProps) {
         </div>
       </div>
 
-      <Button 
-        onClick={handleSimulatePayment} 
-        disabled={isProcessing} 
+      <Button
+        onClick={handleSimulatePayment}
+        disabled={isProcessing}
         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
       >
         {isProcessing ? 'Processing...' : 'Simulate Payment'}

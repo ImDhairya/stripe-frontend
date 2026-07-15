@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '../ui/button';
 import { useToast } from '../../hooks/use-toast';
 
@@ -99,9 +99,9 @@ function CheckoutForm({ paymentId, clientSecret }: { paymentId: string; clientSe
           },
         }} />
       </div>
-      <Button 
-        type="submit" 
-        disabled={!stripe || isProcessing} 
+      <Button
+        type="submit"
+        disabled={!stripe || isProcessing}
         className="w-full bg-blue-600 hover:bg-blue-700 text-white"
       >
         {isProcessing ? 'Processing...' : 'Pay Now'}

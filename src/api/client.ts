@@ -24,7 +24,7 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 };
 
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `http://localhost:3000/api/v1${endpoint}`;
+  const url = `${import.meta.env.VITE_API_BASE_URL}/api/v1${endpoint}`;
   
   const headers = new Headers(options.headers || {});
   if (!(options.body instanceof FormData)) {
@@ -53,7 +53,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     isRefreshing = true;
 
     try {
-      const refreshResponse = await fetch('http://localhost:3000/api/v1/auth/refresh', {
+      const refreshResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
       });

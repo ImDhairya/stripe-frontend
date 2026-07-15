@@ -23,8 +23,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   signup: async (data) => {
     // Handling simple signup -> login flow assuming direct completion or login needed
     const res: any = await authApi.signup(data);
-    
-    // The backend returns { success: true, result: "http://localhost:3000/auth?mode=signup-complete&token=..." }
+
+    // The backend returns { success: true, result: "<API_BASE_URL>/auth?mode=signup-complete&token=..." }
     let token = res.signupToken;
     if (res.result && typeof res.result === 'string') {
       const url = new URL(res.result);
@@ -33,10 +33,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     if (token) {
       // Backend schema requires token, email, password, and name
-      await authApi.signupComplete({ 
-        token, 
-        email: data.email, 
-        password: data.password, 
+      await authApi.signupComplete({
+        token,
+        email: data.email,
+        password: data.password,
         name: data.email.split('@')[0] // Provide a default name
       });
     }
