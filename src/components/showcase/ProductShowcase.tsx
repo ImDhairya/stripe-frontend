@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, ChevronRight, ChevronLeft, Zap, Shield, Webhook, Activity, Layers, RefreshCw, Database, Eye } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Zap, Shield, Webhook, Layers, Database, Eye } from 'lucide-react';
 
 interface Slide {
   tag: string;
