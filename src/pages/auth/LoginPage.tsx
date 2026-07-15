@@ -9,6 +9,8 @@ import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
+import { ProductShowcase } from '../../components/showcase/ProductShowcase';
+import { Sparkles } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,6 +21,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showShowcase, setShowShowcase] = useState(false);
   const { login } = useAuthStore();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -65,15 +68,25 @@ export function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2 text-center text-sm text-muted-foreground">
+        <CardFooter className="flex flex-col space-y-3 text-center text-sm text-muted-foreground">
           <div>
             Don't have an account?{' '}
             <Link to="/signup" className="text-blue-500 hover:text-blue-400">
               Sign up
             </Link>
           </div>
+          <button
+            onClick={() => setShowShowcase(true)}
+            className="group flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-200 text-white/50 hover:text-white/80"
+          >
+            <Sparkles className="w-4 h-4 text-amber-400/70 group-hover:text-amber-400 transition-colors" />
+            <span className="text-xs font-medium tracking-wide">Explore the System Architecture</span>
+          </button>
         </CardFooter>
       </Card>
+
+      {showShowcase && <ProductShowcase onClose={() => setShowShowcase(false)} />}
     </div>
   );
 }
+
