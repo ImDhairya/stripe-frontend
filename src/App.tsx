@@ -7,6 +7,7 @@ import { Toaster } from './components/ui/toaster';
 import { AppShell } from './components/layout/AppShell';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { RoleGuard } from './components/auth/RoleGuard';
+import { DataResetBanner } from './components/layout/DataResetBanner';
 
 // Auth Pages
 import { LoginPage } from './pages/auth/LoginPage';
@@ -59,6 +60,7 @@ export default function App() {
         </Route>
       </Routes>
       <Toaster />
+      <DataResetBanner />
     </Router>
   );
 }

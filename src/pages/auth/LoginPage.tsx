@@ -9,8 +9,7 @@ import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
-import { ProductShowcase } from '../../components/showcase/ProductShowcase';
-import { Sparkles } from 'lucide-react';
+import { AuthLayout } from '../../components/auth/AuthLayout';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -21,7 +20,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [showShowcase, setShowShowcase] = useState(false);
   const { login } = useAuthStore();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -44,11 +42,10 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-background to-background" />
-      <Card className="w-full max-w-md relative z-10 backdrop-blur-xl bg-card/60 border-white/10 shadow-2xl">
+    <AuthLayout>
+      <Card className="w-full relative z-10 bg-card border-border shadow-2xl">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Sign in to PayGate</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">Sign in</CardTitle>
           <CardDescription>Enter your email and password to access your account</CardDescription>
         </CardHeader>
         <CardContent>
@@ -63,7 +60,7 @@ export function LoginPage() {
               <Input id="password" type="password" {...register('password')} />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading}>
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
@@ -71,22 +68,13 @@ export function LoginPage() {
         <CardFooter className="flex flex-col space-y-3 text-center text-sm text-muted-foreground">
           <div>
             Don't have an account?{' '}
-            <Link to="/signup" className="text-blue-500 hover:text-blue-400">
+            <Link to="/signup" className="text-blue-500 hover:text-blue-400 font-medium">
               Sign up
             </Link>
           </div>
-          <button
-            onClick={() => setShowShowcase(true)}
-            className="group flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-200 text-white/50 hover:text-white/80"
-          >
-            <Sparkles className="w-4 h-4 text-amber-400/70 group-hover:text-amber-400 transition-colors" />
-            <span className="text-xs font-medium tracking-wide">Explore the System Architecture</span>
-          </button>
         </CardFooter>
       </Card>
-
-      {showShowcase && <ProductShowcase onClose={() => setShowShowcase(false)} />}
-    </div>
+    </AuthLayout>
   );
 }
 

@@ -9,7 +9,7 @@ import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
-
+import { AuthLayout } from '../../components/auth/AuthLayout';
 const signupSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -45,9 +45,8 @@ export function SignupPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-background to-background" />
-      <Card className="w-full max-w-md relative z-10 backdrop-blur-xl bg-card/60 border-white/10 shadow-2xl">
+    <AuthLayout>
+      <Card className="w-full relative z-10 bg-card border-border shadow-2xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
           <CardDescription>Enter your email below to create your PayGate account</CardDescription>
@@ -69,7 +68,7 @@ export function SignupPage() {
               <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
               {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
             </div>
-            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading}>
               {isLoading ? 'Creating account...' : 'Sign Up'}
             </Button>
           </form>
@@ -77,12 +76,12 @@ export function SignupPage() {
         <CardFooter className="flex flex-col space-y-2 text-center text-sm text-muted-foreground">
           <div>
             Already have an account?{' '}
-            <Link to="/login" className="text-indigo-500 hover:text-indigo-400">
+            <Link to="/login" className="text-blue-500 hover:text-blue-400 font-medium">
               Sign in
             </Link>
           </div>
         </CardFooter>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }
