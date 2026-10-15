@@ -156,44 +156,47 @@ const sdk = new NodeSDK({
   {
     tag: 'ARCHITECTURE',
     tagColor: 'from-sky-500 to-indigo-400',
-    title: 'System Architecture',
-    subtitle: 'Express API + separate BullMQ worker process. PostgreSQL with Drizzle ORM (9 tables, cascading FKs), Redis for caching/queues/rate-limits. Nightly cron wipes the DB for sandbox mode.',
+    title: 'Single-Process & Distributed Architecture',
+    subtitle: 'Unified Express API with optional in-process BullMQ workers (RUN_WORKERS_IN_PROCESS=true) for zero-cost single-node deployment, PostgreSQL with Drizzle ORM, and Redis for distributed locking, caching, and rate limiting.',
     features: [
-      { icon: '🏗️', label: 'Component-Based Backend', detail: '9 domain components: users, payments, refunds, subscriptions, webhooks, admin, search' },
-      { icon: '⚙️', label: '3 BullMQ Workers', detail: 'Inbound Stripe events, outbound webhook delivery, nightly DB cleanup cron' },
-      { icon: '🗄️', label: '9 PostgreSQL Tables', detail: 'Full FK graph with CASCADE deletes, UUID PKs, JSONB metadata, enum types' },
-      { icon: '🔍', label: 'Universal Search', detail: 'GET /search/:resource — paginated, sortable, date-filtered across all entities' },
+      { icon: '🏗️', label: 'Domain-Driven Backend', detail: 'Payments, Refunds, Webhooks, Admin, Search, System Telemetry, and Testing' },
+      { icon: '⚙️', label: 'BullMQ Workers', detail: 'Inbound Stripe webhook ingestion and outbound HMAC dispatch with exponential backoff' },
+      { icon: '🗄️', label: 'Immutable PostgreSQL Audit Trail', detail: 'Full FK graph, CASCADE rules, JSONB mutation logs, and automated demo seed' },
+      { icon: '🧪', label: 'Interactive Stress-Tester', detail: 'In-browser verification of SHA-256 idempotency replay, tamper 409 conflict, and rate limiting' },
     ],
-    diagram: `┌─────────────────────────────────────────────────────┐
-│                    React Frontend                    │
-│  Dashboard │ Payments │ Webhooks │ Admin │ Checkout  │
-└──────────────────────┬──────────────────────────────┘
-                       │ REST API (JWT + Cookies)
-┌──────────────────────▼──────────────────────────────┐
-│              Express.js API Server                   │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐ │
-│ │Rate Limit│→│Idempotent│→│  Quota   │→│ Handler │ │
-│ └──────────┘ └──────────┘ └──────────┘ └────┬────┘ │
-│                                              │      │
-│  ┌─────────────────┐    ┌──────────────────┐ │      │
-│  │ Stripe Processor│    │ Dummy Processor  │ │      │
-│  └────────┬────────┘    └────────┬─────────┘ │      │
-└───────────┼──────────────────────┼───────────┼──────┘
-            │                      │           │
-     ┌──────▼──────┐        ┌─────▼─────┐  ┌──▼──────┐
-     │  Stripe API │        │ In-Memory │  │PostgreSQL│
-     └─────────────┘        └───────────┘  │ 9 tables │
-                                           └──┬──────┘
-┌──────────────────────────────────────────────┼──────┐
-│               BullMQ Workers (Redis)         │      │
-│  ┌────────────┐ ┌───────────┐ ┌────────────┐ │      │
-│  │  Inbound   │ │ Outbound  │ │   Nightly  │ │      │
-│  │  Stripe    │ │ Webhooks  │ │  Cleanup   │ │      │
-│  └────────────┘ └───────────┘ └────────────┘ │      │
-└──────────────────────────────────────────────┘      │
-┌─────────────────────────────────────────────────────┐
-│  Observability: OpenTelemetry → Jaeger │ Prometheus  │
-└─────────────────────────────────────────────────────┘`,
+    diagram: `┌─────────────────────────────────────────────────────────────────┐
+│                        React Frontend                           │
+│  Dashboard │ Payments │ Webhooks │ Observability │ Admin Panel  │
+└────────────────────────────────┬────────────────────────────────┘
+                                 │ REST API (HTTP-Only Cookies)
+┌────────────────────────────────▼────────────────────────────────┐
+│               PayGate Engine (Express.js)                       │
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐ │
+│ │Rate Limit│→│Idempotent│→│  Quota   │→│Audit Log │→│ Handler │ │
+│ └──────────┘ └──────────┘ └──────────┘ └──────────┘ └────┬────┘ │
+│                                                          │      │
+│  ┌─────────────────────┐       ┌──────────────────────┐  │      │
+│  │   Stripe Processor  │       │   Dummy Processor    │  │      │
+│  └──────────┬──────────┘       └──────────┬───────────┘  │      │
+└─────────────┼─────────────────────────────┼──────────────┼──────┘
+              │                             │              │
+       ┌──────▼──────┐               ┌──────▼──────┐   ┌───▼──────┐
+       │  Stripe API │               │ .99 Decline │   │PostgreSQL│
+       └─────────────┘               └─────────────┘   │DrizzleORM│
+                                                       └───┬──────┘
+┌──────────────────────────────────────────────────────────┼──────┐
+│       BullMQ Workers (Redis - In-Process or Standalone)  │      │
+│  ┌──────────────────────┐      ┌───────────────────────┐ │      │
+│  │ Inbound Stripe Queue │      │ Outbound Webhook Queue│ │      │
+│  └──────────────────────┘      └──────────┬────────────┘ │      │
+└───────────────────────────────────────────┼──────────────┘      │
+                                            │                     │
+                       ┌────────────────────▼────────────────┐    │
+                       │ Built-in Sandbox Receiver / Clients │    │
+                       └─────────────────────────────────────┘    │
+┌─────────────────────────────────────────────────────────────────┘
+│  Observability: Prometheus /metrics │ Live Redis/PG Latencies   │
+└─────────────────────────────────────────────────────────────────┘`,
     accentGradient: 'from-sky-600/20 via-indigo-600/10 to-transparent',
   },
 ];

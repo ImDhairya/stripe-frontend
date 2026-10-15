@@ -7,7 +7,6 @@ import { Toaster } from './components/ui/toaster';
 import { AppShell } from './components/layout/AppShell';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { RoleGuard } from './components/auth/RoleGuard';
-import { DataResetBanner } from './components/layout/DataResetBanner';
 
 // Auth Pages
 import { LoginPage } from './pages/auth/LoginPage';
@@ -23,6 +22,7 @@ import { RefundDetailPage } from './pages/refunds/RefundDetailPage';
 // M4 Pages
 import { AdminPage } from './pages/admin/AdminPage';
 import { WebhookPage } from './pages/webhooks/WebhookPage';
+import { TelemetryPage } from './pages/telemetry/TelemetryPage';
 import { TierGuard } from './components/auth/TierGuard';
 
 export default function App() {
@@ -32,7 +32,24 @@ export default function App() {
     fetchMe();
   }, [fetchMe]);
 
-  if (isLoading) return null; // App wide loading state could be better
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center max-w-sm text-center space-y-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <div className="space-y-1">
+            <h3 className="font-semibold text-lg tracking-tight">Connecting to PayGate</h3>
+            <p className="text-xs text-muted-foreground">
+              Initializing secure session...
+            </p>
+          </div>
+          <p className="text-[11px] text-muted-foreground/70 bg-muted/50 p-2.5 rounded border border-border/50">
+            Render Free Tier cold start: if the backend was inactive, it may take 45–60 seconds to spin up.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -52,6 +69,7 @@ export default function App() {
               <WebhookPage />
             </TierGuard>
           } />
+          <Route path="/telemetry" element={<TelemetryPage />} />
           <Route path="/admin/users" element={
             <RoleGuard allowedRoles={['admin']}>
               <AdminPage />
@@ -60,7 +78,6 @@ export default function App() {
         </Route>
       </Routes>
       <Toaster />
-      <DataResetBanner />
     </Router>
   );
 }

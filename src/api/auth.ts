@@ -5,6 +5,8 @@ export interface User {
   email: string;
   role: 'user' | 'admin';
   tier: 'free' | 'paid';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const authApi = {

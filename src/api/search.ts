@@ -1,11 +1,15 @@
 import { apiFetch } from './client';
 
-export interface SearchResponse<T> {
-  data: T[];
+export interface Pagination {
   total: number;
   limit: number;
   offset: number;
   hasMore: boolean;
+}
+
+export interface SearchResponse<T> {
+  data: T[];
+  pagination: Pagination;
 }
 
 export const searchApi = {

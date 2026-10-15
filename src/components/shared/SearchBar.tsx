@@ -1,7 +1,7 @@
 import { Input } from '../ui/input';
 
 import { Search } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
@@ -11,13 +11,22 @@ interface SearchBarProps {
 
 export function SearchBar({ onSearch, placeholder = 'Search...', debounceMs = 300 }: SearchBarProps) {
   const [value, setValue] = useState('');
+  const isFirstRender = useRef(true);
+  const onSearchRef = useRef(onSearch);
+  onSearchRef.current = onSearch;
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     const timer = setTimeout(() => {
-      onSearch(value);
+      onSearchRef.current(value);
     }, debounceMs);
+
     return () => clearTimeout(timer);
-  }, [value, debounceMs, onSearch]);
+  }, [value, debounceMs]);
 
   return (
     <div className="relative w-full max-w-sm">

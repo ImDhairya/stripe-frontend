@@ -24,7 +24,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
@@ -41,6 +41,21 @@ export function LoginPage() {
     }
   };
 
+  const handleDemoLogin = async (email: string, pass: string) => {
+    setValue('email', email);
+    setValue('password', pass);
+    try {
+      setIsLoading(true);
+      await login({ email, password: pass });
+      toast({ title: 'Demo Login Success', description: `Logged in as ${email}.` });
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to login', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <AuthLayout>
       <Card className="w-full relative z-10 bg-card border-border shadow-2xl">
@@ -48,7 +63,47 @@ export function LoginPage() {
           <CardTitle className="text-2xl font-bold tracking-tight">Sign in</CardTitle>
           <CardDescription>Enter your email and password to access your account</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* One-Click Assessor Demo Credentials */}
+          <div className="p-3 bg-muted/50 rounded-lg border border-border/60 space-y-2">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+              1-Click Assessor Demo Logins
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleDemoLogin('admin@paygate.com', 'Admin@12345')}
+                disabled={isLoading}
+                className="text-xs h-9 border-indigo-500/30 hover:bg-indigo-500/10 hover:text-indigo-400 font-medium flex flex-col items-center justify-center py-1"
+              >
+                <span>Admin (Paid Tier)</span>
+                <span className="text-[10px] text-muted-foreground font-mono">admin@paygate.com</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleDemoLogin('merchant@paygate.com', 'Merchant@12345')}
+                disabled={isLoading}
+                className="text-xs h-9 border-border hover:bg-muted/80 font-medium flex flex-col items-center justify-center py-1"
+              >
+                <span>Merchant Store</span>
+                <span className="text-[10px] text-muted-foreground font-mono">merchant@paygate.com</span>
+              </Button>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or with credentials</span>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { LayoutDashboard, CreditCard, Webhook, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, CreditCard, Webhook, Users, LogOut, Activity } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export function AppShell() {
@@ -13,6 +13,7 @@ export function AppShell() {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Payments', href: '/payments', icon: CreditCard },
     { name: 'Webhooks', href: '/webhooks', icon: Webhook, requiresPaid: true },
+    { name: 'Observability & Audit', href: '/telemetry', icon: Activity },
     { name: 'Admin', href: '/admin/users', icon: Users, requiresAdmin: true },
   ];
 

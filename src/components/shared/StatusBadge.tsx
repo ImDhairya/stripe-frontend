@@ -10,14 +10,19 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     switch (s.toLowerCase()) {
       case 'succeeded':
         return 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20';
+      case 'authorized':
+        return 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-purple-500/20';
       case 'processing':
         return 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-blue-500/20 animate-pulse';
       case 'failed':
+      case 'cancelled':
       case 'canceled':
         return 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20';
+      case 'refunded':
+        return 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20';
       case 'requires_payment_method':
       case 'pending':
-        return 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20';
+        return 'bg-sky-500/10 text-sky-500 hover:bg-sky-500/20 border-sky-500/20';
       default:
         return 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20';
     }

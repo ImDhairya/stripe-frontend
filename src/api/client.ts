@@ -76,12 +76,20 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     }
   }
 
-  const rateLimitRemaining = response.headers.get('RateLimit-Remaining');
+  const rateLimitRemaining =
+    response.headers.get('X-RateLimit-Remaining') ||
+    response.headers.get('RateLimit-Remaining');
+  const rateLimitLimit =
+    response.headers.get('X-RateLimit-Limit') ||
+    response.headers.get('RateLimit-Limit');
+  const rateLimitReset =
+    response.headers.get('X-RateLimit-Reset') ||
+    response.headers.get('RateLimit-Reset');
   const retryAfter = response.headers.get('Retry-After');
   
-  if (rateLimitRemaining || retryAfter) {
+  if (rateLimitRemaining !== null || retryAfter) {
     window.dispatchEvent(new CustomEvent('api:quota', {
-      detail: { remaining: rateLimitRemaining, retryAfter }
+      detail: { remaining: rateLimitRemaining, limit: rateLimitLimit, reset: rateLimitReset, retryAfter }
     }));
   }
 
