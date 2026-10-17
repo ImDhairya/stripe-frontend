@@ -2,7 +2,13 @@ export class ApiError extends Error {
   public status: number;
   public data: any;
   constructor(status: number, data: any) {
-    super(data?.message || 'An API error occurred');
+    const message =
+      data?.message ||
+      data?.error?.message ||
+      (typeof data?.error === 'string' ? data.error : null) ||
+      (Array.isArray(data?.issue) ? data.issue[0]?.message : null) ||
+      'An API error occurred';
+    super(message);
     this.status = status;
     this.data = data;
     this.name = 'ApiError';
@@ -27,8 +33,13 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
   const url = `${import.meta.env.VITE_API_BASE_URL}/api/v1${endpoint}`;
   
   const headers = new Headers(options.headers || {});
-  if (!(options.body instanceof FormData)) {
+  if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
+  }
+
+  const token = localStorage.getItem('accessToken');
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
   const config: RequestInit = {
@@ -53,19 +64,43 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     isRefreshing = true;
 
     try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (refreshToken) {
+        refreshHeaders['x-refresh-token'] = refreshToken;
+      }
+
       const refreshResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
+        headers: refreshHeaders,
+        body: JSON.stringify({ refreshToken }),
       });
 
       if (!refreshResponse.ok) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         throw new Error('Session expired');
+      }
+
+      const refreshData = await refreshResponse.json().catch(() => ({}));
+      const newAccessToken = refreshData?.data?.accessToken;
+      if (newAccessToken) {
+        localStorage.setItem('accessToken', newAccessToken);
+      }
+      if (refreshData?.data?.refreshToken) {
+        localStorage.setItem('refreshToken', refreshData.data.refreshToken);
       }
 
       processQueue(null);
       isRefreshing = false;
       
-      // Retry original request
+      // Retry original request with new token
+      if (newAccessToken) {
+        headers.set('Authorization', `Bearer ${newAccessToken}`);
+      }
       response = await fetch(url, config);
     } catch (refreshError) {
       processQueue(refreshError as Error);

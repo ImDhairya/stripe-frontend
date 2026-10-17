@@ -16,9 +16,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   isLoading: true,
   login: async (data) => {
-    await authApi.login(data);
-    const res: any = await authApi.me();
-    set({ user: res.data.user, isAuthenticated: true });
+    const res: any = await authApi.login(data);
+    if (res?.data?.accessToken) {
+      localStorage.setItem('accessToken', res.data.accessToken);
+    }
+    if (res?.data?.refreshToken) {
+      localStorage.setItem('refreshToken', res.data.refreshToken);
+    }
+    if (res?.data?.user) {
+      set({ user: res.data.user, isAuthenticated: true });
+    } else {
+      const meRes: any = await authApi.me();
+      const user = meRes?.data?.user || meRes?.user;
+      set({ user, isAuthenticated: true });
+    }
   },
   signup: async (data) => {
     // Handling simple signup -> login flow assuming direct completion or login needed
@@ -33,21 +44,41 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     if (token) {
       // Backend schema requires token, email, password, and name
-      await authApi.signupComplete({
+      const completeRes: any = await authApi.signupComplete({
         token,
         email: data.email,
         password: data.password,
-        name: data.email.split('@')[0] // Provide a default name
+        name: data.email.split('@')[0], // Provide a default name
       });
+      if (completeRes?.data?.accessToken) {
+        localStorage.setItem('accessToken', completeRes.data.accessToken);
+      }
+      if (completeRes?.data?.refreshToken) {
+        localStorage.setItem('refreshToken', completeRes.data.refreshToken);
+      }
     }
-    await authApi.login({ email: data.email, password: data.password });
-    const meRes: any = await authApi.me();
-    set({ user: meRes.data.user, isAuthenticated: true });
+    const loginRes: any = await authApi.login({ email: data.email, password: data.password });
+    if (loginRes?.data?.accessToken) {
+      localStorage.setItem('accessToken', loginRes.data.accessToken);
+    }
+    if (loginRes?.data?.refreshToken) {
+      localStorage.setItem('refreshToken', loginRes.data.refreshToken);
+    }
+    if (loginRes?.data?.user) {
+      set({ user: loginRes.data.user, isAuthenticated: true });
+    } else {
+      const meRes: any = await authApi.me();
+      const user = meRes?.data?.user || meRes?.user;
+      set({ user, isAuthenticated: true });
+    }
   },
   logout: async () => {
     try {
-      await authApi.logout();
+      const refreshToken = localStorage.getItem('refreshToken');
+      await authApi.logout(refreshToken ? { refreshToken } : undefined);
     } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       set({ user: null, isAuthenticated: false });
     }
   },
@@ -55,8 +86,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ isLoading: true });
       const res: any = await authApi.me();
-      set({ user: res.data.user, isAuthenticated: true, isLoading: false });
+      const user = res?.data?.user || res?.user;
+      if (user) {
+        set({ user, isAuthenticated: true, isLoading: false });
+      } else {
+        set({ user: null, isAuthenticated: false, isLoading: false });
+      }
     } catch (error) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
@@ -64,5 +102,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 // Listen for unauthorized events to clear state
 window.addEventListener('auth:unauthorized', () => {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
   useAuthStore.setState({ user: null, isAuthenticated: false, isLoading: false });
 });
