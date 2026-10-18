@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuthStore } from '../../stores/authStore';
 import { systemApi, type SystemTelemetry } from '../../api/system';
 import { paymentsApi } from '../../api/payments';
 import { searchApi } from '../../api/search';
@@ -50,6 +51,8 @@ interface AuditLogItem {
 
 export function TelemetryPage() {
   const { toast } = useToast();
+  const { user } = useAuthStore();
+  const isPaid = user?.tier === 'paid';
 
   // Section 1: Telemetry State
   const [telemetry, setTelemetry] = useState<SystemTelemetry | null>(null);
@@ -81,6 +84,8 @@ export function TelemetryPage() {
     totalSent: number;
     succeededCount: number;
     rateLimitedCount: number;
+    limit: number;
+    remaining?: number;
     details: { index: number; status: number; remaining?: string }[];
   } | null>(null);
 
@@ -263,20 +268,34 @@ export function TelemetryPage() {
   // STRESS TEST 3: Sliding-Window Rate Limit Burst
   const runRateLimitBurstTest = async () => {
     setBurstLoading(true);
-    setBurstResults(null);
 
-    const totalRequests = 35;
-    const results: { index: number; status: number; remaining?: string }[] = [];
+    const burstSize = isPaid ? 100 : 35;
+    const tierLimit = isPaid ? 300 : 30;
+
+    const token = localStorage.getItem('accessToken');
+    const authHeaders: Record<string, string> = {};
+    if (token) {
+      authHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
+    const baseUrl =
+      typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app')
+        ? ''
+        : (import.meta.env.VITE_API_BASE_URL || '');
+
+    const results: { index: number; status: number; remaining?: string; limit?: string }[] = [];
 
     // Rapidly execute requests to payments/stats (protected by rateLimit)
-    const promises = Array.from({ length: totalRequests }).map(async (_, idx) => {
+    const promises = Array.from({ length: burstSize }).map(async (_, idx) => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/payments/stats`, {
+        const response = await fetch(`${baseUrl}/api/v1/payments/stats`, {
           method: 'GET',
+          headers: authHeaders,
           credentials: 'include',
         });
         const remaining = response.headers.get('X-RateLimit-Remaining') || undefined;
-        return { index: idx + 1, status: response.status, remaining };
+        const limit = response.headers.get('X-RateLimit-Limit') || undefined;
+        return { index: idx + 1, status: response.status, remaining, limit };
       } catch (e: any) {
         return { index: idx + 1, status: 500 };
       }
@@ -288,17 +307,32 @@ export function TelemetryPage() {
     const succeededCount = results.filter((r) => r.status === 200).length;
     const rateLimitedCount = results.filter((r) => r.status === 429).length;
 
+    const lastValidRes = [...results].reverse().find((r) => r.remaining !== undefined);
+    const latestRemaining =
+      lastValidRes?.remaining !== undefined ? parseInt(lastValidRes.remaining, 10) : undefined;
+    const detectedLimit = lastValidRes?.limit ? parseInt(lastValidRes.limit, 10) : tierLimit;
+
     setBurstResults({
-      totalSent: totalRequests,
+      totalSent: burstSize,
       succeededCount,
       rateLimitedCount,
+      limit: detectedLimit,
+      remaining: latestRemaining,
       details: results,
     });
 
-    toast({
-      title: 'Rate Limit Burst Executed!',
-      description: `${succeededCount} succeeded, ${rateLimitedCount} throttled with HTTP 429.`,
-    });
+    if (rateLimitedCount > 0) {
+      toast({
+        title: 'Rate Limit Enforced (HTTP 429)!',
+        description: `${rateLimitedCount} requests throttled. Sliding window limit reached.`,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Burst Accepted (200 OK)!',
+        description: `${succeededCount} requests approved. ${latestRemaining !== undefined ? `${latestRemaining} remaining in window.` : ''}`,
+      });
+    }
 
     setBurstLoading(false);
     fetchTelemetry();
@@ -634,33 +668,95 @@ export function TelemetryPage() {
                 <Badge variant="outline" className="border-red-500/30 text-red-400 bg-red-500/10 text-[11px]">
                   Test 3 • Rate Limiting
                 </Badge>
-                <Activity className="h-4 w-4 text-muted-foreground" />
+                <Badge variant="secondary" className="text-[10px] font-mono font-semibold">
+                  {isPaid ? 'PAID (300/MIN)' : 'FREE (30/MIN)'}
+                </Badge>
               </div>
-              <CardTitle className="text-base font-semibold">Sliding-Window Burst (35 req)</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Sliding-Window Burst ({isPaid ? '100' : '35'} req)
+              </CardTitle>
               <CardDescription className="text-xs">
-                Fires 35 concurrent requests in parallel against the API.
+                Fires {isPaid ? '100' : '35'} concurrent requests in parallel against the API.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 flex-1 flex flex-col justify-between">
               <div className="space-y-2 text-xs">
-                <div className="p-2.5 bg-muted/50 rounded border text-muted-foreground">
-                  Tests Redis sliding-window algorithm. Free tier limits to 30 req/min; excess requests receive immediate HTTP 429 Too Many Requests.
+                <div className="p-2.5 bg-muted/50 rounded border text-muted-foreground space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span>Active Account:</span>
+                    <span className="font-semibold text-foreground">{user?.email || 'admin@paygate.com'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Window Rate Limit:</span>
+                    <span className="font-mono text-foreground font-semibold">
+                      {isPaid ? '300 requests / 60s' : '30 requests / 60s'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground/80 pt-1 border-t border-border/50">
+                    {isPaid
+                      ? 'Each click fires 100 requests. Click 3–4 times rapidly to exhaust the 300 quota and trigger HTTP 429 throttling!'
+                      : 'Free tier limit is 30 req/min. This 35-request burst will immediately throttle 5 requests with HTTP 429.'}
+                  </p>
                 </div>
 
                 {burstResults && (
                   <div className="space-y-2 pt-2 border-t font-mono text-[11px]">
                     <div className="flex items-center justify-between p-2 bg-background rounded border">
-                      <span>Total Fired:</span>
-                      <strong>{burstResults.totalSent}</strong>
+                      <span>Burst Fired:</span>
+                      <strong>{burstResults.totalSent} requests</strong>
                     </div>
                     <div className="flex items-center justify-between p-2 bg-background rounded border text-emerald-400">
                       <span>Allowed (200 OK):</span>
                       <strong>{burstResults.succeededCount}</strong>
                     </div>
-                    <div className="flex items-center justify-between p-2 bg-background rounded border text-red-400">
+                    <div
+                      className={`flex items-center justify-between p-2 bg-background rounded border ${
+                        burstResults.rateLimitedCount > 0
+                          ? 'text-red-400 font-bold bg-red-950/20 border-red-500/30'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
                       <span>Throttled (429):</span>
                       <strong>{burstResults.rateLimitedCount}</strong>
                     </div>
+
+                    {burstResults.remaining !== undefined && (
+                      <div className="p-2 bg-muted/40 rounded border space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-muted-foreground">Sliding Window Capacity:</span>
+                          <span className="text-foreground font-semibold">
+                            {burstResults.limit - burstResults.remaining} / {burstResults.limit} used ({burstResults.remaining} left)
+                          </span>
+                        </div>
+                        <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-300 ${
+                              burstResults.remaining === 0 ? 'bg-red-500' : 'bg-emerald-500'
+                            }`}
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.round(
+                                  ((burstResults.limit - burstResults.remaining) / burstResults.limit) * 100
+                                )
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {burstResults.rateLimitedCount > 0 ? (
+                      <div className="p-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded text-[11px] flex items-center gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>SLIDING-WINDOW ENFORCED: 60s limit reached! Excess calls throttled with HTTP 429.</span>
+                      </div>
+                    ) : (
+                      <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded text-[11px] flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>CAPACITY REMAINING: Click again to consume remaining quota until 429 triggers.</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -671,7 +767,7 @@ export function TelemetryPage() {
                 className="w-full mt-4 bg-red-600 hover:bg-red-700 text-xs"
               >
                 {burstLoading ? <Clock className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
-                {burstLoading ? 'Executing Burst...' : 'Run 35-Request Burst'}
+                {burstLoading ? 'Executing Burst...' : `Run ${isPaid ? '100' : '35'}-Request Burst`}
               </Button>
             </CardContent>
           </Card>
