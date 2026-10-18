@@ -25,6 +25,8 @@ import { WebhookPage } from './pages/webhooks/WebhookPage';
 import { TelemetryPage } from './pages/telemetry/TelemetryPage';
 import { TierGuard } from './components/auth/TierGuard';
 
+const isEvaluatorMode = import.meta.env.VITE_EVALUATOR_MODE !== 'false';
+
 export default function App() {
   const { fetchMe, isLoading } = useAuthStore();
 
@@ -40,12 +42,11 @@ export default function App() {
           <div className="space-y-1">
             <h3 className="font-semibold text-lg tracking-tight">Connecting to PayGate</h3>
             <p className="text-xs text-muted-foreground">
-              Initializing secure session...
+              {isEvaluatorMode
+                ? 'Initializing Assessor Platform Admin environment...'
+                : 'Initializing secure session...'}
             </p>
           </div>
-          <p className="text-[11px] text-muted-foreground/70 bg-muted/50 p-2.5 rounded border border-border/50">
-            Render Free Tier cold start: if the backend was inactive, it may take 45–60 seconds to spin up.
-          </p>
         </div>
       </div>
     );
@@ -55,7 +56,10 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+        <Route
+          path="/signup"
+          element={isEvaluatorMode ? <Navigate to="/login" replace /> : <SignupPage />}
+        />
         
         <Route element={<AuthGuard><AppShell /></AuthGuard>}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

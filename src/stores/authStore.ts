@@ -11,11 +11,14 @@ interface AuthState {
   fetchMe: () => Promise<void>;
 }
 
+const isEvaluatorMode = import.meta.env.VITE_EVALUATOR_MODE !== 'false';
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
   login: async (data) => {
+    sessionStorage.removeItem('paygate_explicit_logout');
     const res: any = await authApi.login(data);
     if (res?.data?.accessToken) {
       localStorage.setItem('accessToken', res.data.accessToken);
@@ -32,6 +35,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
   signup: async (data) => {
+    sessionStorage.removeItem('paygate_explicit_logout');
     // Handling simple signup -> login flow assuming direct completion or login needed
     const res: any = await authApi.signup(data);
 
@@ -74,6 +78,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   logout: async () => {
     try {
+      sessionStorage.setItem('paygate_explicit_logout', 'true');
       const refreshToken = localStorage.getItem('refreshToken');
       await authApi.logout(refreshToken ? { refreshToken } : undefined);
     } finally {
@@ -85,14 +90,56 @@ export const useAuthStore = create<AuthState>((set) => ({
   fetchMe: async () => {
     try {
       set({ isLoading: true });
-      const res: any = await authApi.me();
-      const user = res?.data?.user || res?.user;
-      if (user) {
-        set({ user, isAuthenticated: true, isLoading: false });
-      } else {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        try {
+          const res: any = await authApi.me();
+          const user = res?.data?.user || res?.user;
+          if (user) {
+            set({ user, isAuthenticated: true, isLoading: false });
+            return;
+          }
+        } catch {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+        }
+      }
+
+      // If user explicitly chose to log out in this browser session, respect their choice
+      if (sessionStorage.getItem('paygate_explicit_logout') === 'true') {
         set({ user: null, isAuthenticated: false, isLoading: false });
+        return;
+      }
+
+      // If Evaluator Mode is disabled, do not auto-login
+      if (!isEvaluatorMode) {
+        set({ user: null, isAuthenticated: false, isLoading: false });
+        return;
+      }
+
+      // Auto-authenticate as Platform Admin for seamless evaluator sandbox
+      const loginRes: any = await authApi.login({
+        email: 'admin@paygate.com',
+        password: 'Admin@12345',
+      });
+
+      if (loginRes?.data?.accessToken) {
+        localStorage.setItem('accessToken', loginRes.data.accessToken);
+      }
+      if (loginRes?.data?.refreshToken) {
+        localStorage.setItem('refreshToken', loginRes.data.refreshToken);
+      }
+
+      const adminUser = loginRes?.data?.user;
+      if (adminUser) {
+        set({ user: adminUser, isAuthenticated: true, isLoading: false });
+      } else {
+        const meRes: any = await authApi.me();
+        const meUser = meRes?.data?.user || meRes?.user;
+        set({ user: meUser, isAuthenticated: true, isLoading: false });
       }
     } catch (error) {
+      console.warn('Auto-admin login fallback skipped:', error);
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       set({ user: null, isAuthenticated: false, isLoading: false });
