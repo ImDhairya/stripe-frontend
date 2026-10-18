@@ -29,8 +29,18 @@ const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue = [];
 };
 
+function getApiBaseUrl(): string {
+  // When running on Vercel (*.vercel.app), use relative path to route through
+  // Vercel's rewrite proxy (vercel.json). This makes requests same-origin,
+  // completely eliminating CORS preflight errors across all preview and branch URLs.
+  if (typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app')) {
+    return '';
+  }
+  return import.meta.env.VITE_API_BASE_URL || '';
+}
+
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${import.meta.env.VITE_API_BASE_URL}/api/v1${endpoint}`;
+  const url = `${getApiBaseUrl()}/api/v1${endpoint}`;
   
   const headers = new Headers(options.headers || {});
   if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -72,7 +82,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
         refreshHeaders['x-refresh-token'] = refreshToken;
       }
 
-      const refreshResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/auth/refresh`, {
+      const refreshResponse = await fetch(`${getApiBaseUrl()}/api/v1/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
         headers: refreshHeaders,
