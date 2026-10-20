@@ -274,10 +274,7 @@ export function TelemetryPage() {
       authHeaders['Authorization'] = `Bearer ${token}`;
     }
 
-    const apiBase =
-      typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app')
-        ? ''
-        : import.meta.env.VITE_API_BASE_URL || '';
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
 
     // Rapidly execute requests to payments/stats (protected by rateLimit)
     const promises = Array.from({ length: totalRequests }).map(async (_, idx) => {
